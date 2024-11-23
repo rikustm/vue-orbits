@@ -1,7 +1,13 @@
-<script setup></script>
+<script setup>
+import HomeView from "./components/HomeView.vue";
+</script>
 
 <template>
-  <p>Hallo World</p>
+  <HomeView />
 </template>
 
-<style></style>
+<style>
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+</style>
