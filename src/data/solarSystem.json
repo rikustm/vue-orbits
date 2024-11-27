@@ -11,7 +11,7 @@
             "mass": 0.000003,
             "r": 0.000043,
             "distance": 1,
-            "phase": 45
+            "phase": 0
         },
         {
             "name": "mars",
@@ -19,7 +19,7 @@
             "mass": 3.2e-7,
             "r": 0.000023,
             "distance": 1.524,
-            "phase": 45
+            "phase": 0
         }
     ]}
 ]

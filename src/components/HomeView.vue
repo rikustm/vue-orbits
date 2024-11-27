@@ -11,16 +11,17 @@ import solarSystem from "./../data/solarSystem.json";
 //Set constants/scales
 const width = 800;
 const height = 800;
-const maxDistance = d3.max(
-  solarSystem.map((d) =>
-    d3.max(d.satellites.map((s) => d.distance + s.distance))
-  )
-);
+const maxDistance =
+  d3.max(
+    solarSystem.map((d) =>
+      d3.max(d.satellites.map((s) => d.distance + s.distance))
+    )
+  ) * 1.2;
 const au = d3
   .scaleLinear() // Astronomical unit
   .domain([0, maxDistance * 2.1])
   .range([0, Math.min(width, height)]);
-const G = 0.0005;
+const G = 0.00005;
 const pxG = G * Math.pow(au(1), 3);
 
 const nodes = ref(parseBodies(solarSystem));
@@ -118,6 +119,12 @@ const currentVelocity = computed(() => {
   //   Math.pow(satellite.value.vx, 2) + Math.pow(satellite.value.vy, 2)
   // ).toFixed(2);
 });
+
+const earthAngle = computed(() => {
+  const earth = nodes.value.find((d) => d.name === "earth");
+  const angle = (Math.atan(earth.y / earth.x) * 180) / Math.PI;
+  return angle.toFixed(2);
+});
 </script>
 
 <template>
@@ -145,6 +152,7 @@ const currentVelocity = computed(() => {
       </svg>
     </div>
     <div>
+      <pre>{{ earthAngle }}</pre>
       <pre>{{ ticks }}</pre>
       <pre>{{ nodes }}</pre>
     </div>
