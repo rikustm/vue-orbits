@@ -1,0 +1,25 @@
+[
+    {"name": "sun",
+    "color": "#FFFF55",
+    "mass": 1,
+    "r": 0.0047,
+    "distance": 0,
+    "satellites": [
+        {
+            "name": "earth",
+            "color": "#007FFF",
+            "mass": 0.000003,
+            "r": 0.000043,
+            "distance": 1,
+            "phase": 45
+        },
+        {
+            "name": "mars",
+            "color": "#FF7700",
+            "mass": 3.2e-7,
+            "r": 0.000023,
+            "distance": 1.524,
+            "phase": 45
+        }
+    ]}
+]

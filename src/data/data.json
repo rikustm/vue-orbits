@@ -1,0 +1,8 @@
+{
+    "sun": {"name":"sun", "color": "gold", "mass": 1, "radius": 0.0047},
+    "planets": [
+        {"name": "earth", "color": "green", "mass": 0.000003, "radius": 0.000043, "distance": 1},
+        {"name": "mars", "color": "red", "mass": 3.2e-7, "radius": 0.000023, "distance": 1.524} 
+    ]
+}
+
