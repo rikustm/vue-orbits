@@ -4,6 +4,7 @@
     "mass": 1,
     "r": 0.0047,
     "distance": 0,
+    "scale":25,
     "satellites": [
         {
             "name": "earth",
@@ -16,7 +17,7 @@
         {
             "name": "mars",
             "color": "#FF7700",
-            "mass": 3.2e-7,
+            "mass": 0.00000032,
             "r": 0.000023,
             "distance": 1.524,
             "phase": 0

@@ -23,29 +23,18 @@ const au = d3
   .domain([0, maxDistance])
   .range([0, Math.min(width / 2, height / 2)]);
 
-const G = 0.0005;
-const pxG = G * Math.pow(1, 3);
+// const dateScale = d3
+//   .scaleLinear()
+//   .domain([0, 360])
+//   .range([0, 1000 * 60 * 60 * 24 * 365]);
 
-const extractSunAndSatillite = (bodies) => {
-  const sunOnly = { ...bodies[0] };
-  const { distance, r, mass, phase } = sunOnly.satellites.find(
-    (planet) => planet.name === "earth"
-  );
+// const pxTom = d3
+//   .scaleLinear()
+//   .domain([0, au(maxDistance / 2)])
+//   .range([0, (maxDistance / 2) * 1.496 * Math.pow(10, 11)]);
 
-  sunOnly.satellites = [
-    {
-      name: "satellite",
-      distance,
-      r: 0.00001,
-      mass,
-      phase,
-    },
-  ];
-
-  return parseBodies([sunOnly]);
-};
-
-const satillite = ref(extractSunAndSatillite(solarSystem));
+const G = 0.00005;
+const pxG = G * Math.pow(au(1), 3);
 
 const nodes = ref(parseBodies(solarSystem));
 
@@ -62,12 +51,13 @@ function parseBodies(
           Math.PI) /
         180; // Random init angle if not specified (to prevent aligned init forces from distorting orbits)
 
-      const x = posOffset[0] + body.distance * Math.sin(ang);
-      const y = posOffset[1] - body.distance * Math.cos(ang);
+      const x = posOffset[0] + au(body.distance) * Math.sin(ang);
+      const y = posOffset[1] - au(body.distance) * Math.cos(ang);
 
       const relVelocity =
-        (body.distance ? Math.sqrt((pxG * parentMass) / body.distance) : 0) *
-        (body.factorV || 1); // orbital velocity: sqrt(GM/d)
+        (body.distance
+          ? Math.sqrt((pxG * parentMass) / au(body.distance))
+          : 0) * (body.factorV || 1); // orbital velocity: sqrt(GM/d)
 
       const vx = velocityOffset[0] + relVelocity * Math.cos(ang);
       const vy = velocityOffset[1] + relVelocity * Math.sin(ang);
@@ -76,13 +66,12 @@ function parseBodies(
         {
           name: body.name,
           color: body.color,
-          r: body.r,
+          r: au(body.r) * (body.scale || scalingFactor.value),
           mass: body.mass,
           x,
           y,
           vx,
           vy,
-          scale: body.scale,
           trails: [],
         },
         ...parseBodies(body.satellites || [], body.mass, [x, y], [vx, vy]),
@@ -114,27 +103,12 @@ forceSim.on("tick", () => {
   // });
 });
 
-const forceSim2 = d3
-  .forceSimulation()
-  .alphaDecay(0)
-  .velocityDecay(0)
-  .force(
-    "gravity",
-    d3ForceMagnetic()
-      .id((d) => d.id)
-      .charge((node) => node.mass)
-  );
-
-forceSim2.nodes(satillite.value).force("gravity").strength(pxG);
-
 function onPause() {
   paused.value = !paused.value;
   if (paused.value) {
     forceSim.stop();
-    forceSim2.stop();
   } else {
     forceSim.restart();
-    forceSim2.restart();
   }
 }
 
@@ -157,13 +131,6 @@ function onReset() {
   ticks.value = 0;
   nodes.value = parseBodies(solarSystem);
   forceSim.nodes(nodes.value);
-  satillite.value = parseBodies(extractSunAndSatillite(solarSystem));
-  forceSim2.nodes(satillite.value);
-}
-
-function onLaunch() {
-  satillite.value[1].vx *= 1.11;
-  satillite.value[1].vy *= 1.11;
 }
 
 const currentVelocity = computed(() => {
@@ -190,7 +157,6 @@ const earthAngle = computed(() => {
     <!-- <button class="btn btn-primary" @click="onBack"><</button>
     <button class="btn btn-primary" @click="onForward">></button> -->
     <button class="btn btn-primary" @click="onReset">Reset</button>
-    <button class="btn btn-primary" @click="onLaunch">Launch</button>
     <!-- <button class="btn btn-primary" @click="onAcelerate(0.99)"><<</button>
     <button class="btn btn-primary" @click="onAcelerate(1.01)">>></button> -->
   </div>
@@ -201,15 +167,10 @@ const earthAngle = computed(() => {
           <circle
             v-for="node in nodes"
             :key="node.index"
-            :r="au(node.r) * (node.scale || scalingFactor)"
+            :r="node.r"
             :fill="node.color"
-            :cx="au(node.x)"
-            :cy="au(node.y)"
-          ></circle>
-          <circle
-            :r="au(satillite[1].r) * (satillite[1].scale || scalingFactor)"
-            :cx="au(satillite[1].x)"
-            :cy="au(satillite[1].y)"
+            :cx="node.x"
+            :cy="node.y"
           ></circle>
           <!-- <circle r="20" fill="gold"></circle>
           <circle
@@ -225,7 +186,6 @@ const earthAngle = computed(() => {
     <div>
       <pre>{{ ticks }}</pre>
       <pre>{{ nodes }}</pre>
-      <pre>{{ satillite }}</pre>
     </div>
   </div>
 </template>
