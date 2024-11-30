@@ -1,9 +1,11 @@
 <script setup>
+import { DateTime } from "luxon";
 import { ref, computed } from "vue";
 import d3ForceMagnetic from "d3-force-magnetic";
 
 const paused = ref(false);
 const ticks = ref(0);
+let years = 0;
 const scalingFactor = ref(800);
 
 //Get sun/planet/satillite data
@@ -22,6 +24,11 @@ const au = d3
   .scaleLinear() // Astronomical unit
   .domain([0, maxDistance])
   .range([0, Math.min(width / 2, height / 2)]);
+
+const dateScale = d3
+  .scaleLinear()
+  .domain([0, 360])
+  .range([0, 1000 * 60 * 60 * 24 * 365]);
 
 const G = 0.0005;
 const pxG = G * Math.pow(1, 3);
@@ -91,6 +98,13 @@ function parseBodies(
   );
 }
 
+const earthAngle = computed(() => {
+  const earth = nodes.value.find((d) => d.name === "earth");
+  const angleRad = Math.atan2(earth.x, -earth.y);
+  const angle = (angleRad * 180) / Math.PI + (angleRad < 0 ? 360 : 0);
+  return angle;
+});
+
 const forceSim = d3
   .forceSimulation()
   .alphaDecay(0)
@@ -104,14 +118,19 @@ const forceSim = d3
 
 forceSim.nodes(nodes.value).force("gravity").strength(pxG);
 
+let previousAngle = 0;
+
 forceSim.on("tick", () => {
   ticks.value++;
 
-  // const bodies = nodes.value;
+  const bodies = nodes.value;
 
-  // bodies.forEach((body) => {
-  //   body.trails.push([body.x, body.y]);
-  // });
+  bodies.forEach((body) => {
+    setItem(body.trails, [body.x, body.y], 600);
+  });
+
+  if (previousAngle > earthAngle) years++;
+  previousAngle = earthAngle;
 });
 
 const forceSim2 = d3
@@ -126,6 +145,13 @@ const forceSim2 = d3
   );
 
 forceSim2.nodes(satillite.value).force("gravity").strength(pxG);
+
+forceSim2.on("tick", () => {
+  const bodies = forceSim2.nodes();
+  bodies.forEach((body) => {
+    setItem(body.trails, [body.x, body.y], 600);
+  });
+});
 
 function onPause() {
   paused.value = !paused.value;
@@ -162,8 +188,12 @@ function onReset() {
 }
 
 function onLaunch() {
-  satillite.value[1].vx *= 1.11;
-  satillite.value[1].vy *= 1.11;
+  satillite.value[1].vx *= 1.098;
+  satillite.value[1].vy *= 1.098;
+}
+
+function setItem(array, item, length) {
+  array.unshift(item) > length ? array.pop() : null;
 }
 
 const currentVelocity = computed(() => {
@@ -175,13 +205,6 @@ const currentVelocity = computed(() => {
 const actualDistance = (x, y) => {
   return pxTom(Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)));
 };
-
-const earthAngle = computed(() => {
-  const earth = nodes.value.find((d) => d.name === "earth");
-  const angleRad = Math.atan2(earth.x, -earth.y);
-  const angle = (angleRad * 180) / Math.PI + (angleRad < 0 ? 360 : 0);
-  return angle;
-});
 </script>
 
 <template>
@@ -198,34 +221,46 @@ const earthAngle = computed(() => {
     <div>
       <svg :width="width" :height="height">
         <g :transform="`translate(${width / 2},${height / 2})`">
-          <circle
-            v-for="node in nodes"
-            :key="node.index"
-            :r="au(node.r) * (node.scale || scalingFactor)"
-            :fill="node.color"
-            :cx="au(node.x)"
-            :cy="au(node.y)"
-          ></circle>
+          <g v-for="node in nodes">
+            <circle
+              :key="node.index"
+              :r="au(node.r) * (node.scale || scalingFactor)"
+              :fill="node.color"
+              :cx="au(node.x)"
+              :cy="au(node.y)"
+            ></circle>
+            <circle
+              v-for="crumb in node.trails"
+              r="1"
+              :cx="au(crumb[0])"
+              :cy="au(crumb[1])"
+              fill="lightgray"
+            ></circle>
+          </g>
+
           <circle
             :r="au(satillite[1].r) * (satillite[1].scale || scalingFactor)"
             :cx="au(satillite[1].x)"
             :cy="au(satillite[1].y)"
           ></circle>
-          <!-- <circle r="20" fill="gold"></circle>
           <circle
-            r="10"
-            fill="green"
-            :cx="nodes[1].x"
-            :cy="nodes[1].y"
+            v-for="crumb in satillite[1].trails"
+            r="1"
+            :cx="au(crumb[0])"
+            :cy="au(crumb[1])"
+            fill="lightgray"
           ></circle>
-          <circle r="10" fill="red" :cx="nodes[2].x" :cy="nodes[2].y"></circle> -->
         </g>
       </svg>
     </div>
     <div>
       <pre>{{ ticks }}</pre>
-      <pre>{{ nodes }}</pre>
-      <pre>{{ satillite }}</pre>
+      <pre>{{
+        DateTime.fromMillis(dateScale(earthAngle))
+          .plus({ years: years })
+          .toISODate()
+      }}</pre>
+      <pre>{{ earthAngle }}</pre>
     </div>
   </div>
 </template>
