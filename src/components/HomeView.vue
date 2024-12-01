@@ -114,6 +114,7 @@ function parseBodies(
           name: body.name,
           color: body.color,
           r: body.r,
+          distance: body.distance,
           mass: body.mass,
           x,
           y,
@@ -127,6 +128,22 @@ function parseBodies(
     })
   );
 }
+
+const sun = nodes.value[0];
+const earth = nodes.value[1];
+const mars = nodes.value[2];
+
+const initialOrbitVelocity = Math.sqrt((G * sun.mass) / earth.distance);
+const finalOrbitVelocity = Math.sqrt((G * sun.mass) / mars.distance);
+const semiMajorAxisTransferOrbit = (earth.distance + mars.distance) / 2;
+const vTransferStart = Math.sqrt(
+  G * sun.mass * (2 / earth.distance - 1 / semiMajorAxisTransferOrbit)
+);
+const vTransferEnd = Math.sqrt(
+  G * sun.mass * (2 / mars.distance - 1 / semiMajorAxisTransferOrbit)
+);
+const vDeltaStart = vTransferStart - initialOrbitVelocity;
+const vDeltaEnd = finalOrbitVelocity - vTransferEnd;
 
 // function getEarthAngle() {
 //   const earth = nodes.value.find((d) => d.name === "earth");
@@ -162,7 +179,7 @@ forceSim.on("tick", () => {
   const bodies = nodes.value;
 
   bodies.forEach((body) => {
-    setItem(body.trails, [body.x, body.y], 600);
+    setItem(body.trails, [body.x, body.y], 1000);
   });
 
   date.value = DateTime.fromObject({ year: years + 1970 }).plus(
@@ -189,7 +206,7 @@ forceSim2.nodes(satillite.value).force("gravity").strength(G);
 forceSim2.on("tick", () => {
   const bodies = forceSim2.nodes();
   bodies.forEach((body) => {
-    setItem(body.trails, [body.x, body.y], 600);
+    setItem(body.trails, [body.x, body.y], 1000);
   });
 });
 
@@ -232,9 +249,14 @@ function onReset() {
   forceSim2.nodes(satillite.value);
 }
 
-function onLaunch() {
-  satillite.value[1].vx *= 1.098;
-  satillite.value[1].vy *= 1.098;
+function onThrust(deltaV) {
+  const velocity = Math.sqrt(
+    Math.pow(satillite.value[1].vx, 2) + Math.pow(satillite.value[1].vy, 2)
+  );
+  const accFactor = 1 + deltaV / (velocity + deltaV);
+
+  satillite.value[1].vx *= accFactor;
+  satillite.value[1].vy *= accFactor;
 }
 
 function setItem(array, item, length) {
@@ -242,9 +264,9 @@ function setItem(array, item, length) {
 }
 
 const currentVelocity = computed(() => {
-  // return Math.sqrt(
-  //   Math.pow(satellite.value.vx, 2) + Math.pow(satellite.value.vy, 2)
-  // ).toFixed(2);
+  return Math.sqrt(
+    Math.pow(satillite.value[1].vx, 2) + Math.pow(satillite.value[1].vy, 2)
+  );
 });
 
 const actualDistance = computed(() => {
@@ -263,7 +285,16 @@ const actualDistance = computed(() => {
         <!-- <button class="btn btn-primary" @click="onBack"><</button>
     <button class="btn btn-primary" @click="onForward">></button> -->
         <button class="btn btn-primary" @click="onReset">Reset</button>
-        <button class="btn btn-primary" @click="onLaunch">Launch</button>
+        <button
+          class="btn btn-primary"
+          @click="onThrust(0.0008080730543428352)"
+        >
+          Launch
+        </button>
+        <button class="btn btn-primary" @click="onThrust(0.000726863210490712)">
+          Thrust
+        </button>
+
         <!-- <div>
       <input
         type="range"
@@ -317,7 +348,7 @@ const actualDistance = computed(() => {
     <div>
       <pre>{{ date.toFormat("yyyy-MM-dd") }}</pre>
       <pre>{{ nextAlignment }}</pre>
-      <!-- <pre>{{ actualDistance }}</pre> -->
+      <pre>{{ currentVelocity }}</pre>
     </div>
   </div>
 </template>
