@@ -133,17 +133,48 @@ const sun = nodes.value[0];
 const earth = nodes.value[1];
 const mars = nodes.value[2];
 
-const initialOrbitVelocity = Math.sqrt((G * sun.mass) / earth.distance);
-const finalOrbitVelocity = Math.sqrt((G * sun.mass) / mars.distance);
-const semiMajorAxisTransferOrbit = (earth.distance + mars.distance) / 2;
-const vTransferStart = Math.sqrt(
-  G * sun.mass * (2 / earth.distance - 1 / semiMajorAxisTransferOrbit)
-);
-const vTransferEnd = Math.sqrt(
-  G * sun.mass * (2 / mars.distance - 1 / semiMajorAxisTransferOrbit)
-);
-const vDeltaStart = vTransferStart - initialOrbitVelocity;
-const vDeltaEnd = finalOrbitVelocity - vTransferEnd;
+const thrusts = getThrusts(G * sun.mass, earth.distance, mars.distance);
+
+// const initialOrbitVelocity = Math.sqrt((G * sun.mass) / earth.distance);
+// const finalOrbitVelocity = Math.sqrt((G * sun.mass) / mars.distance);
+// const semiMajorAxisTransferOrbit = (earth.distance + mars.distance) / 2;
+// const vTransferStart = Math.sqrt(
+//   G * sun.mass * (2 / earth.distance - 1 / semiMajorAxisTransferOrbit)
+// );
+// const vTransferEnd = Math.sqrt(
+//   G * sun.mass * (2 / mars.distance - 1 / semiMajorAxisTransferOrbit)
+// );
+// const vDeltaStart = vTransferStart - initialOrbitVelocity;
+// const vDeltaEnd = finalOrbitVelocity - vTransferEnd;
+
+function getThrusts(
+  gravitationParametCentralBody,
+  radiusLowerOrbit,
+  radiusHigherOrbit
+) {
+  const initialOrbitVelocity = Math.sqrt(
+    gravitationParametCentralBody / radiusLowerOrbit
+  );
+  const finalOrbitVelocity = Math.sqrt(
+    gravitationParametCentralBody / radiusHigherOrbit
+  );
+
+  const semiMajorAxisTransferOrbit = (radiusLowerOrbit + radiusHigherOrbit) / 2;
+
+  const vTransferStart = Math.sqrt(
+    gravitationParametCentralBody *
+      (2 / radiusLowerOrbit - 1 / semiMajorAxisTransferOrbit)
+  );
+  const vTransferEnd = Math.sqrt(
+    gravitationParametCentralBody *
+      (2 / radiusHigherOrbit - 1 / semiMajorAxisTransferOrbit)
+  );
+
+  const vDeltaStart = vTransferStart - initialOrbitVelocity;
+  const vDeltaEnd = finalOrbitVelocity - vTransferEnd;
+
+  return [vDeltaStart, vDeltaEnd];
+}
 
 // function getEarthAngle() {
 //   const earth = nodes.value.find((d) => d.name === "earth");
@@ -271,9 +302,12 @@ const currentVelocity = computed(() => {
 
 const actualDistance = computed(() => {
   const mars = nodes.value.find((node) => node.name === "mars");
-  const distance = Math.sqrt(Math.pow(mars.x, 2) + Math.pow(mars.y, 2));
+  const marsDistance = Math.sqrt(Math.pow(mars.x, 2) + Math.pow(mars.y, 2));
 
-  return distance;
+  const earth = nodes.value.find((node) => node.name === "earth");
+  const earthDistance = Math.sqrt(Math.pow(earth.x, 2) + Math.pow(earth.y, 2));
+
+  return [earthDistance, marsDistance];
 });
 </script>
 
@@ -287,11 +321,18 @@ const actualDistance = computed(() => {
         <button class="btn btn-primary" @click="onReset">Reset</button>
         <button
           class="btn btn-primary"
-          @click="onThrust(0.0008080730543428352)"
+          @click="
+            onThrust(getThrusts(G, actualDistance[0], actualDistance[1])[0])
+          "
         >
           Launch
         </button>
-        <button class="btn btn-primary" @click="onThrust(0.000726863210490712)">
+        <button
+          class="btn btn-primary"
+          @click="
+            onThrust(getThrusts(G, actualDistance[0], actualDistance[1])[1])
+          "
+        >
           Thrust
         </button>
 
@@ -349,6 +390,7 @@ const actualDistance = computed(() => {
       <pre>{{ date.toFormat("yyyy-MM-dd") }}</pre>
       <pre>{{ nextAlignment }}</pre>
       <pre>{{ currentVelocity }}</pre>
+      <pre>{{ actualDistance }}</pre>
     </div>
   </div>
 </template>

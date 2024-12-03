@@ -17,7 +17,8 @@
     "express": "^4.21.1",
     "luxon": "^3.5.0",
     "serve-static": "^1.16.2",
-    "vue": "^3.5.12"
+    "vue": "^3.5.12",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.4",
