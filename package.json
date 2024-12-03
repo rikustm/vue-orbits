@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "astronomy-engine": "^2.1.19",
+    "connect-history-api-fallback": "^2.0.0",
     "d3": "^7.9.0",
     "d3-force-magnetic": "^1.0.1",
     "express": "^4.21.1",
