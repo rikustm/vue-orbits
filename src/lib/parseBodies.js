@@ -24,6 +24,7 @@ export default function parseBodies(bodies, G) {
       y,
       vx,
       vy,
+      trials: [],
     };
 
     if (body.scale) node.scale = body.scale;

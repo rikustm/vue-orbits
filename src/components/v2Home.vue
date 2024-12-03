@@ -2,7 +2,13 @@
   <div class="flex">
     <div class="p-2 space-y-2 flex flex-col">
       <button class="btn btn-primary" @click="onPause">Play/Pause</button>
-      <button class="btn btn-primary" @click="onThrust">Thrust</button>
+      <button class="btn btn-primary" @click="onReset">Reset</button>
+      <button class="btn btn-primary" @click="onThrust(thrust[0])">
+        Thrust1
+      </button>
+      <button class="btn btn-primary" @click="onThrust(thrust[1])">
+        Thrust2
+      </button>
     </div>
     <div>
       <svg :width="width" :height="height">
@@ -13,6 +19,13 @@
               :cy="mToPx(body.y)"
               :r="mToPx(body.radius) * (body.scale || scale)"
               :fill="body.color"
+            ></circle>
+            <circle
+              v-for="crumb in trials[body.name]"
+              :cx="mToPx(crumb[0])"
+              :cy="mToPx(crumb[1])"
+              r="1"
+              fill="gray"
             ></circle>
           </g>
           <g>
@@ -25,12 +38,19 @@
               "
               :fill="satelliteNodes[1].color"
             ></circle>
+            <circle
+              v-for="crumb in satelliteNodes[1].trials"
+              :cx="mToPx(crumb[0])"
+              :cy="mToPx(crumb[1])"
+              r="1"
+              fill="red"
+            ></circle>
           </g>
         </g>
       </svg>
     </div>
     <div>
-      <pre>{{ nodes }}</pre>
+      <!-- <pre>{{ nodes }}</pre>-->
       <pre>{{ satelliteNodes }}</pre>
     </div>
   </div>
@@ -40,18 +60,19 @@
 //imports libraries
 import { ref, computed } from "vue";
 import * as d3 from "d3";
-import d3ForceMagnetic from "d3-force-magnetic";
 
 import { sun, planets } from "./../data/data.json";
 import { linear } from "./../lib/scale";
 import parseBodies from "@/lib/parseBodies";
 import { getGravityForceSimulator } from "./../lib/forceSimulator";
+import { setItem } from "./../lib/utils";
+import { calculateTrusts } from "./../lib/hohhmann";
 
 //Constants
 let height = 800;
 let width = 800;
 let scale = 600;
-let speedfactor = 10000000000;
+let speedfactor = 1000000000;
 let G = 6.6743e-11;
 
 //scales
@@ -72,16 +93,39 @@ let satellite = {
   phase,
   radius: radius * 0.3,
 };
+let thrust = calculateTrusts(
+  nodes.value[1].distance,
+  nodes.value[2].distance,
+  G * speedfactor,
+  nodes.value[0].mass
+);
+let satelliteTrialActive = false;
+let trials = ref({ earth: [], mars: [] });
 
 let satelliteNodes = ref(parseBodies([sun, satellite], G * speedfactor));
 
 //Simulations
-const forceSimPlanets = getGravityForceSimulator(G, speedfactor).nodes(
-  nodes.value
-);
-const forceSimSatellite = getGravityForceSimulator(G, speedfactor).nodes(
-  satelliteNodes.value
-);
+const forceSimPlanets = getGravityForceSimulator(G, speedfactor)
+  .nodes(nodes.value)
+  .stop();
+
+const forceSimSatellite = getGravityForceSimulator(G, speedfactor)
+  .nodes(satelliteNodes.value)
+  .stop();
+
+preDrawTrials(forceSimPlanets);
+
+startSimulation();
+
+function startSimulation() {
+  forceSimPlanets.restart();
+  forceSimSatellite.restart();
+}
+
+function stopSimulation() {
+  forceSimPlanets.stop();
+  forceSimSatellite.stop();
+}
 
 //EventHandlers
 function onPause() {
@@ -95,10 +139,66 @@ function onPause() {
   }
 }
 
-function onThrust() {
+function onThrust(deltaV) {
+  satelliteTrialActive = true;
   const satellite = satelliteNodes.value[1];
 
-  satellite.vx *= 1.09;
-  satellite.vy *= 1.09;
+  const vectorAngle = Math.atan(satellite.vy / satellite.vx);
+
+  const deltaX = deltaV * Math.cos(vectorAngle);
+  const deltaY = deltaV * Math.sin(vectorAngle);
+
+  console.log(satellite.vx, satellite.vy);
+  console.log(deltaX, deltaY);
+
+  if (satellite.vx > 0) {
+    satellite.vx += deltaX;
+  } else {
+    satellite.vx -= deltaX;
+  }
+  if (satellite.vy > 0) {
+    satellite.vy += deltaY;
+  } else {
+    satellite.vy -= deltaY;
+  }
 }
+
+function onReset() {
+  resetPlanets();
+  resetSatellite();
+}
+
+function resetPlanets() {
+  nodes.value = parseBodies([sun, ...planets], G * speedfactor);
+  forceSimPlanets.nodes(nodes.value);
+}
+
+function resetSatellite() {
+  satelliteTrialActive = false;
+  satelliteNodes.value = parseBodies([sun, satellite], G * speedfactor);
+  forceSimSatellite.nodes(satelliteNodes.value);
+}
+
+function preDrawTrials(simulation) {
+  for (let i = 0; i < 200; i++) {
+    simulation.tick(10);
+    simulation.nodes().map((planet) => {
+      if (planet.name !== "sun") {
+        trials.value[planet.name].push([planet.x, planet.y]);
+      }
+    });
+  }
+  resetPlanets();
+}
+
+//Trials
+setInterval(() => {
+  nodes.value.map((node) => {
+    //if (node.name !== "sun") setItem(node.trials, [node.x, node.y], 50);
+  });
+  satelliteNodes.value.map((node) => {
+    if (node.name !== "sun" && satelliteTrialActive)
+      setItem(node.trials, [node.x, node.y], 500);
+  });
+}, 50);
 </script>
