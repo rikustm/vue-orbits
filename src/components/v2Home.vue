@@ -1,7 +1,8 @@
 <template>
   <div class="flex">
-    <div class="p-2 space-y-2">
+    <div class="p-2 space-y-2 flex flex-col">
       <button class="btn btn-primary" @click="onPause">Play/Pause</button>
+      <button class="btn btn-primary" @click="onThrust">Thrust</button>
     </div>
     <div>
       <svg :width="width" :height="height">
@@ -14,11 +15,23 @@
               :fill="body.color"
             ></circle>
           </g>
+          <g>
+            <circle
+              :cx="mToPx(satelliteNodes[1].x)"
+              :cy="mToPx(satelliteNodes[1].y)"
+              :r="
+                mToPx(satelliteNodes[1].radius) *
+                (satelliteNodes[1].scale || scale)
+              "
+              :fill="satelliteNodes[1].color"
+            ></circle>
+          </g>
         </g>
       </svg>
     </div>
     <div>
       <pre>{{ nodes }}</pre>
+      <pre>{{ satelliteNodes }}</pre>
     </div>
   </div>
 </template>
@@ -48,30 +61,44 @@ const mToPx = linear(maxDistance * 1.2, Math.min(width, height) / 2);
 //State variables
 let paused = false;
 let nodes = ref(parseBodies([sun, ...planets], G * speedfactor));
+let { distance, mass, phase, radius } = planets.find(
+  (planet) => planet.name === "earth"
+);
+let satellite = {
+  name: "satellite",
+  color: "black",
+  distance,
+  mass,
+  phase,
+  radius: radius * 0.3,
+};
+
+let satelliteNodes = ref(parseBodies([sun, satellite], G * speedfactor));
 
 //Simulations
-const forceSimPlanets = getGravityForceSimulator(G, speedfactor);
-// d3
-//   .forceSimulation()
-//   .alphaDecay(0)
-//   .velocityDecay(0)
-//   .force(
-//     "gravity",
-//     d3ForceMagnetic()
-//       .id((d) => d.id)
-//       .charge((node) => node.mass)
-//       .strength(G * speedfactor)
-//   );
-
-forceSimPlanets.nodes(nodes.value);
+const forceSimPlanets = getGravityForceSimulator(G, speedfactor).nodes(
+  nodes.value
+);
+const forceSimSatellite = getGravityForceSimulator(G, speedfactor).nodes(
+  satelliteNodes.value
+);
 
 //EventHandlers
 function onPause() {
   paused = !paused;
   if (paused) {
     forceSimPlanets.stop();
+    forceSimSatellite.stop();
   } else {
     forceSimPlanets.restart();
+    forceSimSatellite.restart();
   }
+}
+
+function onThrust() {
+  const satellite = satelliteNodes.value[1];
+
+  satellite.vx *= 1.09;
+  satellite.vy *= 1.09;
 }
 </script>
