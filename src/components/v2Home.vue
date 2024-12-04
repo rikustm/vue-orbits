@@ -6,9 +6,14 @@
       <button class="btn btn-primary" @click="onThrust(thrust[0])">
         Thrust1
       </button>
-      <button class="btn btn-primary" @click="onThrust(thrust[1])">
+      <button
+        :disabled="autopilot"
+        class="btn btn-primary"
+        @click="onThrust(thrust[1])"
+      >
         Thrust2
       </button>
+      <label> <input type="checkbox" v-model="autopilot" /> Autopilot </label>
     </div>
     <div>
       <svg :width="width" :height="height">
@@ -50,8 +55,14 @@
       </svg>
     </div>
     <div>
-      <!-- <pre>{{ nodes }}</pre>-->
-      <pre>{{ satelliteNodes }}</pre>
+      <pre>{{
+        `deltaV1: ${(thrust[0] / Math.sqrt(speedfactor)).toFixed(4)}m/s`
+      }}</pre>
+      <pre>{{
+        `deltaV2: ${(thrust[1] / Math.sqrt(speedfactor)).toFixed(4)}m/s`
+      }}</pre>
+      <pre v-if="launched">{{ `Angle of Launch: ${angleOfLaunch ?? ""}` }}</pre>
+      <!-- <Maths /> -->
     </div>
   </div>
 </template>
@@ -60,6 +71,8 @@
 //imports libraries
 import { ref, computed } from "vue";
 import * as d3 from "d3";
+
+import Maths from "./Maths.vue";
 
 import { sun, planets } from "./../data/data.json";
 import { linear } from "./../lib/scale";
@@ -81,6 +94,8 @@ const mToPx = linear(maxDistance * 1.2, Math.min(width, height) / 2);
 
 //State variables
 let paused = false;
+const autopilot = ref(true);
+let launched = ref(false);
 let nodes = ref(parseBodies([sun, ...planets], G * speedfactor));
 let { distance, mass, phase, radius } = planets.find(
   (planet) => planet.name === "earth"
@@ -93,16 +108,19 @@ let satellite = {
   phase,
   radius: radius * 0.3,
 };
-let thrust = calculateTrusts(
-  nodes.value[1].distance,
-  nodes.value[2].distance,
-  G * speedfactor,
-  nodes.value[0].mass
+const thrust = ref(
+  calculateTrusts(
+    nodes.value[1].distance,
+    nodes.value[2].distance,
+    G * speedfactor,
+    nodes.value[0].mass
+  )
 );
 let satelliteTrialActive = false;
 let trials = ref({ earth: [], mars: [] });
+const angleOfLaunch = ref(null);
 
-let satelliteNodes = ref(parseBodies([sun, satellite], G * speedfactor));
+const satelliteNodes = ref(parseBodies([sun, satellite], G * speedfactor));
 
 //Simulations
 const forceSimPlanets = getGravityForceSimulator(G, speedfactor)
@@ -140,8 +158,11 @@ function onPause() {
 }
 
 function onThrust(deltaV) {
+  launched.value = true;
   satelliteTrialActive = true;
   const satellite = satelliteNodes.value[1];
+
+  angleOfLaunch.value = getAngle(satellite.x, satellite.y);
 
   const vectorAngle = Math.atan(satellite.vy / satellite.vx);
 
@@ -191,14 +212,26 @@ function preDrawTrials(simulation) {
   resetPlanets();
 }
 
+function getAngle(x, y) {
+  const angleRad = Math.atan2(x, -y);
+  const angle = (angleRad * 180) / Math.PI + (angleRad < 0 ? 360 : 0);
+  return angle;
+}
+
 //Trials
 setInterval(() => {
   nodes.value.map((node) => {
     //if (node.name !== "sun") setItem(node.trials, [node.x, node.y], 50);
   });
   satelliteNodes.value.map((node) => {
-    if (node.name !== "sun" && satelliteTrialActive)
+    if (node.name !== "sun" && satelliteTrialActive) {
       setItem(node.trials, [node.x, node.y], 500);
+      const currentAngle = getAngle(node.x, node.y);
+
+      if (currentAngle - angleOfLaunch.value > 180 && autopilot.value) {
+        onThrust(thrust.value[1]);
+      }
+    }
   });
 }, 50);
 </script>

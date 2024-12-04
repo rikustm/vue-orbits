@@ -11,6 +11,7 @@
     "start": "node server.cjs"
   },
   "dependencies": {
+    "@hsorby/vue3-katex": "^0.6.0-rc.7",
     "astronomy-engine": "^2.1.19",
     "connect-history-api-fallback": "^2.0.0",
     "d3": "^7.9.0",
