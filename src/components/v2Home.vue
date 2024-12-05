@@ -169,18 +169,15 @@ function onThrust(deltaV) {
   const deltaX = deltaV * Math.cos(vectorAngle);
   const deltaY = deltaV * Math.sin(vectorAngle);
 
-  console.log(satellite.vx, satellite.vy);
-  console.log(deltaX, deltaY);
-
   if (satellite.vx > 0) {
-    satellite.vx += deltaX;
+    satellite.vx += Math.abs(deltaX);
   } else {
-    satellite.vx -= deltaX;
+    satellite.vx -= Math.abs(deltaX);
   }
   if (satellite.vy > 0) {
-    satellite.vy += deltaY;
+    satellite.vy += Math.abs(deltaY);
   } else {
-    satellite.vy -= deltaY;
+    satellite.vy -= Math.abs(deltaY);
   }
 }
 
@@ -228,8 +225,15 @@ setInterval(() => {
       setItem(node.trials, [node.x, node.y], 500);
       const currentAngle = getAngle(node.x, node.y);
 
-      if (currentAngle - angleOfLaunch.value > 180 && autopilot.value) {
+      if (
+        (currentAngle < angleOfLaunch.value ? 360 : 0) +
+          currentAngle -
+          angleOfLaunch.value >
+          180 &&
+        autopilot.value
+      ) {
         onThrust(thrust.value[1]);
+        autopilot.value = false;
       }
     }
   });
