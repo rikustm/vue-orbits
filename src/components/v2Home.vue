@@ -61,6 +61,11 @@
       <pre>{{
         `deltaV2: ${(thrust[1] / Math.sqrt(speedfactor)).toFixed(4)}m/s`
       }}</pre>
+      <pre>{{ `Angel of Earth: ${angleOfPlanets.earth}` }}</pre>
+      <pre>{{ `Angel of Mars: ${angleOfPlanets.mars}` }}</pre>
+      <pre>{{
+        `Difference: ${angleOfPlanets.mars - angleOfPlanets.earth}`
+      }}</pre>
       <pre v-if="launched">{{ `Angle of Launch: ${angleOfLaunch ?? ""}` }}</pre>
       <!-- <Maths /> -->
     </div>
@@ -119,6 +124,7 @@ const thrust = ref(
 let satelliteTrialActive = false;
 let trials = ref({ earth: [], mars: [] });
 const angleOfLaunch = ref(null);
+const angleOfPlanets = ref({});
 
 const satelliteNodes = ref(parseBodies([sun, satellite], G * speedfactor));
 
@@ -218,8 +224,23 @@ function getAngle(x, y) {
 //Trials
 setInterval(() => {
   nodes.value.map((node) => {
+    if (node.name !== "sun") {
+      const angle = getAngle(node.x, node.y);
+      angleOfPlanets.value[node.name] = angle;
+    }
     //if (node.name !== "sun") setItem(node.trials, [node.x, node.y], 50);
   });
+
+  if (
+    launched.value === false &&
+    autopilot.value &&
+    +(
+      angleOfPlanets.value["mars"] - angleOfPlanets.value["earth"]
+    ).toFixed() === 44
+  ) {
+    onThrust(thrust.value[0]);
+  }
+
   satelliteNodes.value.map((node) => {
     if (node.name !== "sun" && satelliteTrialActive) {
       setItem(node.trials, [node.x, node.y], 500);
